@@ -94,8 +94,6 @@
       // eslint-disable-next-line no-new-func
       return Function('return ' + s)();
     }
-
-    // Button handling
     document.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
         const v = btn.dataset.value;
@@ -115,8 +113,6 @@
         updateDisplay();
       })
     })
-
-    // Keyboard support
     window.addEventListener('keydown', (e) => {
       if(e.key >= '0' && e.key <= '9'){
         expression += e.key; updateDisplay(); return;
@@ -139,9 +135,8 @@
         expression += '%'; updateDisplay(); return;
       }
     })
-
-    // init
     updateDisplay();
   </script>
 </body>
+
 </html>
