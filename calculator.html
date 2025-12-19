@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Calculator</title>
+  <style>
+    :root{--bg:#f3f4f6;--panel:#ffffff;--accent:#0ea5a4;--btn:#e6e7e8}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(180deg,#eef2ff, #f8fafc)}
+    .calculator{width:340px;background:var(--panel);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.08)}
+    .display{height:64px;background:#f4f6f8;border-radius:10px;padding:12px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;word-break:break-all}
+    .display .expr{font-size:14px;color:#6b7280}
+    .display .result{font-size:24px;font-weight:600;color:#0f172a}
+    .grid{margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    button{height:56px;border-radius:10px;border:0;background:var(--btn);font-size:18px;font-weight:600;cursor:pointer}
+    button.operator{background:#fffbeb;color:#92400e}
+    button.equals{background:var(--accent);color:#fff;grid-column:span 2}
+    button.wide{grid-column:span 2}
+    .small{font-size:14px}
+    footer{margin-top:10px;text-align:center;font-size:12px;color:#94a3b8}
+  </style>
+</head>
+<body>
+  <div class="calculator" role="application" aria-label="Simple calculator">
+    <div class="display" id="display">
+      <div class="expr" id="expr">0</div>
+      <div class="result" id="result">0</div>
+    </div>
+
+    <div class="grid">
+      <button class="small" data-action="clear" title="Clear (Esc)">AC</button>
+      <button class="small" data-action="back">⌫</button>
+      <button class="small" data-value="%">%</button>
+      <button class="operator" data-value="/">÷</button>
+
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button class="operator" data-value="*">×</button>
+
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button class="operator" data-value="-">−</button>
+
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button class="operator" data-value="+">+</button>
+
+      <button data-value="0" class="wide">0</button>
+      <button data-value=".">.</button>
+      <button class="equals" data-action="equals">=</button>
+    </div>
+
+    <footer>Tip: You can also use keyboard (numbers, + - * /, Enter, Backspace, Esc)</footer>
+  </div>
+
+  <script>
+    const exprEl = document.getElementById('expr');
+    const resultEl = document.getElementById('result');
+
+    let expression = '';
+
+    function updateDisplay(){
+      exprEl.textContent = expression || '0';
+      try{
+        const sanitized = sanitize(expression);
+        if(sanitized === ''){ resultEl.textContent = '0'; return }
+        const evaluated = evaluateSafe(sanitized);
+        resultEl.textContent = evaluated;
+      }catch(e){ resultEl.textContent = 'Err' }
+    }
+
+    function sanitize(s){
+      // Allow only digits, space, operators, decimal point and parentheses
+      // Also convert unicode operators to JS equivalents
+      if(!s) return '';
+      s = s.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+      // Remove any character not allowed
+      const allowed = s.match(/[0-9+\-*/().%\s]+/g);
+      return allowed ? allowed.join('') : '';
+    }
+
+    function evaluateSafe(s){
+      // handle percentage: convert a%b -> (a/100)*b is ambiguous; we interpret trailing % as divide by 100
+      // Replace occurrences like "50%" -> "(50/100)"
+      s = s.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+      // Final safety check: only these characters
+      if(!/^[-+0-9*/().\s%]+$/.test(s)) throw Error('Unsafe');
+      // Use Function to evaluate (slightly safer than eval) inside try/catch
+      // Note: This is a simple calculator; it won't allow names or calls.
+      // eslint-disable-next-line no-new-func
+      return Function('return ' + s)();
+    }
+
+    // Button handling
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.value;
+        const action = btn.dataset.action;
+        if(action === 'clear'){
+          expression = '';
+        } else if(action === 'back'){
+          expression = expression.slice(0,-1);
+        } else if(action === 'equals'){
+          try{
+            const val = evaluateSafe(sanitize(expression));
+            expression = String(val);
+          }catch(e){ expression = ''; resultEl.textContent = 'Err' }
+        } else if(v !== undefined){
+          expression += v;
+        }
+        updateDisplay();
+      })
+    })
+
+    // Keyboard support
+    window.addEventListener('keydown', (e) => {
+      if(e.key >= '0' && e.key <= '9'){
+        expression += e.key; updateDisplay(); return;
+      }
+      if(['+','-','*','/','(',')','.'].includes(e.key)){
+        expression += e.key; updateDisplay(); return;
+      }
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        try{ expression = String(evaluateSafe(sanitize(expression))); }catch(err){ expression=''; resultEl.textContent='Err' }
+        updateDisplay(); return;
+      }
+      if(e.key === 'Backspace'){
+        expression = expression.slice(0,-1); updateDisplay(); return;
+      }
+      if(e.key === 'Escape'){
+        expression = ''; updateDisplay(); return;
+      }
+      if(e.key === '%'){
+        expression += '%'; updateDisplay(); return;
+      }
+    })
+
+    // init
+    updateDisplay();
+  </script>
+</body>
+</html>
